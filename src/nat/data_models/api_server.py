@@ -275,12 +275,13 @@ class ChatResponse(ResponseBaseModelOutput):
         if created is None:
             created = datetime.datetime.now(datetime.timezone.utc)
 
-        return ChatResponse(id=id_,
-                            object=object_,
-                            model=model,
-                            created=created,
-                            choices=[Choice(index=0, message=ChoiceMessage(content=data), finish_reason="stop")],
-                            usage=usage)
+        return ChatResponse(
+            id=id_,
+            object=object_,
+            model=model,
+            created=created,
+            choices=[Choice(index=0, message=ChoiceMessage(content=data, role="assistant"), finish_reason="stop")],
+            usage=usage)
 
 
 class ChatResponseChunk(ResponseBaseModelOutput):
@@ -323,11 +324,12 @@ class ChatResponseChunk(ResponseBaseModelOutput):
         if object_ is None:
             object_ = "chat.completion.chunk"
 
-        return ChatResponseChunk(id=id_,
-                                 choices=[Choice(index=0, message=ChoiceMessage(content=data), finish_reason="stop")],
-                                 created=created,
-                                 model=model,
-                                 object=object_)
+        return ChatResponseChunk(
+            id=id_,
+            choices=[Choice(index=0, message=ChoiceMessage(content=data, role="assistant"), finish_reason="stop")],
+            created=created,
+            model=model,
+            object=object_)
 
     @staticmethod
     def create_streaming_chunk(content: str,
@@ -655,8 +657,27 @@ GlobalTypeConverter.register_converter(_string_to_nat_chat_response)
 
 
 def _chat_response_to_chat_response_chunk(data: ChatResponse) -> ChatResponseChunk:
-    # Preserve original message structure for backward compatibility
-    return ChatResponseChunk(id=data.id, choices=data.choices, created=data.created, model=data.model)
+    # Convert ChatResponse to streaming format with delta.content
+    if data.choices and len(data.choices) > 0:
+        choice = data.choices[0]
+        content = choice.message.content if choice.message else ""
+        role = choice.message.role if choice.message else "assistant"
+        finish_reason = choice.finish_reason
+
+        return ChatResponseChunk.create_streaming_chunk(content=content,
+                                                        role=role,
+                                                        finish_reason=finish_reason,
+                                                        id_=data.id,
+                                                        created=data.created,
+                                                        model=data.model)
+    else:
+        # Fallback for empty choices
+        return ChatResponseChunk.create_streaming_chunk(content="",
+                                                        role="assistant",
+                                                        finish_reason="stop",
+                                                        id_=data.id,
+                                                        created=data.created,
+                                                        model=data.model)
 
 
 GlobalTypeConverter.register_converter(_chat_response_to_chat_response_chunk)
