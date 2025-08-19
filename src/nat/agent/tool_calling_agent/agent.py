@@ -88,7 +88,6 @@ class ToolCallAgentGraph(DualNodeAgent):
             logger.debug("%s Starting the Tool Calling Agent Node", AGENT_LOG_PREFIX)
             if len(state.messages) == 0:
                 raise RuntimeError('No input received in state: "messages"')
-            # response = await self.bound_llm.ainvoke(state.messages, config=RunnableConfig(callbacks=self.callbacks))
             response = await self.agent.ainvoke(
                 {"messages": state.messages},
                 config=RunnableConfig(callbacks=self.callbacks),
