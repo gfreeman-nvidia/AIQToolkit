@@ -324,12 +324,13 @@ class ChatResponseChunk(ResponseBaseModelOutput):
         if object_ is None:
             object_ = "chat.completion.chunk"
 
-        return ChatResponseChunk(
-            id=id_,
-            choices=[Choice(index=0, message=ChoiceMessage(content=data, role="assistant"), finish_reason="stop")],
-            created=created,
-            model=model,
-            object=object_)
+        delta = ChoiceDelta(content=data, role="assistant") if data is not None else ChoiceDelta()
+
+        return ChatResponseChunk(id=id_,
+                                 choices=[Choice(index=0, message=None, delta=delta, finish_reason="stop")],
+                                 created=created,
+                                 model=model,
+                                 object=object_)
 
     @staticmethod
     def create_streaming_chunk(content: str,
